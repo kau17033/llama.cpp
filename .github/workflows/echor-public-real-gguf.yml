@@ -1,0 +1,47 @@
+name: ECHOR Real GGUF Public Smoke (No Secrets)
+on:
+  push:
+    branches:
+      - research/gguf-public-smoke-20261020
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: echor-public-model-gguf
+  cancel-in-progress: true
+
+jobs:
+  public-model-cpu:
+    if: github.repository == 'kau17033/llama.cpp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 42
+    steps:
+      - name: Checkout public llama.cpp fork (no credentials persisted)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Set up Python for local-only experiment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build pinned llama.cpp source revision from this commit
+        run: |
+          git rev-parse HEAD
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=ON
+          cmake --build build --config Release --target llama-quantize llama-server llama-bench -j 2
+      - name: Install public runner measurement dependencies
+        run: python -m pip install --disable-pip-version-check 'huggingface_hub>=0.29,<2' 'psutil>=5.9,<8'
+      - name: Download only public model and perform real F16/Q8/Q6/Q5/Q4 experiment
+        env:
+          HF_HUB_DISABLE_TELEMETRY: '1'
+          HF_HUB_DISABLE_PROGRESS_BARS: '1'
+          HF_HUB_ETAG_TIMEOUT: '45'
+        run: |
+          python scripts/echor_qwen_public_bench.py
+      - name: No model files or private artifacts retained
+        if: always()
+        run: |
+          echo 'Runner is ephemeral. No GGUF models, credentials or artifacts are uploaded.'
