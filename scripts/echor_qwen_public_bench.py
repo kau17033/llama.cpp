@@ -106,8 +106,7 @@ def launch_and_evaluate(server, model, prompts):
         init_ms = (time.monotonic() - started) * 1000
 
         def completion(prompt):
-            payload = {"model": "public_qwen_smoke",
-                       "messages": [{"role": "system", "content": "Answer only with one decimal integer."},
+            payload = {"messages": [{"role": "system", "content": "Answer only with one decimal integer."},
                                     {"role": "user", "content": prompt}],
                        "temperature": 0.0, "top_k": 1, "seed": 42,
                        "max_tokens": 24, "stream": False}
